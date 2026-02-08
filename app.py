@@ -1,7 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
+
 from router import route
-from utils.pdf_export import export_results_to_pdf
 
 # =========================
 # Page configuration
@@ -13,17 +13,18 @@ st.set_page_config(
 )
 
 # =========================
-# DISCLAIMER (safe HTML)
+# Disclaimer (HTML, safe)
 # =========================
 components.html(
     """
     <div style="
         background-color:#ffe6e6;
         padding:20px;
-        border-radius:10px;
+        border-radius:12px;
         border-left:6px solid #cc0000;
-        margin-bottom:20px;
+        margin-bottom:24px;
         font-family: Inter, system-ui, sans-serif;
+        max-width: 1100px;
     ">
         <div style="color:#cc0000; font-size:20px; font-weight:700; margin-bottom:12px;">
             Important Disclaimer
@@ -54,7 +55,7 @@ components.html(
         </p>
     </div>
     """,
-    height=330,
+    height=360,
 )
 
 # =========================
@@ -65,7 +66,7 @@ st.sidebar.header("Settings")
 language = st.sidebar.selectbox(
     "Qur’an Language",
     ["en", "bn"],
-    key="quran_language_select"
+    key="quran_language"
 )
 
 top_k = st.sidebar.slider(
@@ -73,23 +74,17 @@ top_k = st.sidebar.slider(
     min_value=1,
     max_value=5,
     value=3,
-    key="top_k_slider"
+    key="top_k"
 )
-
-st.sidebar.markdown("### Sources")
-
-use_quran = st.sidebar.checkbox("Qur’an", value=True)
-use_hadith = st.sidebar.checkbox("Hadith", value=False)
-use_sharia = st.sidebar.checkbox("Sharia Principles", value=False)
-use_hanafi = st.sidebar.checkbox("Hanafi Fiqh", value=False)
 
 st.sidebar.markdown("---")
 st.sidebar.markdown(
     """
     **About this project**
     - Multi-agent Islamic knowledge retrieval
+    - Sources: Qur’an, Hadith, Sharia principles, Hanafi fiqh
     - Retrieval-only (no rulings generated)
-    - Agents load on demand (Cloud-safe)
+    - Agents load on demand (cloud-safe)
     """
 )
 
@@ -99,69 +94,68 @@ st.sidebar.markdown(
 question = st.text_input(
     "Ask a question",
     placeholder="e.g. prayer, hardship in Islam, intention in salah",
-    key="question_input"
+    key="question"
 )
 
 # =========================
 # Results
 # =========================
 if question:
-    if not any([use_quran, use_hadith, use_sharia, use_hanafi]):
-        st.warning("Please select at least one source from the sidebar.")
-    else:
-        with st.spinner("Searching selected Islamic sources..."):
-            results = route(
-                question,
-                lang=language,
-                top_k=top_k,
-                use_quran=use_quran,
-                use_hadith=use_hadith,
-                use_sharia=use_sharia,
-                use_hanafi=use_hanafi,
+    with st.spinner("Searching classical Islamic sources..."):
+        results = route(
+            question,
+            lang=language,
+            top_k=top_k
+        )
+
+    st.markdown("---")
+
+    for source, answers in results.items():
+        if not answers:
+            continue
+
+        st.markdown(f"## {source}")
+
+        for ans in answers:
+            st.markdown(
+                f"""
+                <div style="
+                    background: linear-gradient(135deg, #0f172a, #020617);
+                    padding:18px;
+                    margin-bottom:16px;
+                    border-radius:10px;
+                    border-left:5px solid #38bdf8;
+                    color:#e5e7eb;
+                    line-height:1.7;
+                    font-size:15px;
+                ">
+                    {ans}
+                </div>
+                """,
+                unsafe_allow_html=True
             )
 
-        st.markdown("---")
+    st.markdown("---")
 
-        for source, answers in results.items():
-            st.markdown(f"## {source}")
+    # =========================
+    # PDF Export (optional)
+    # =========================
+    try:
+        from utils.pdf_export import export_results_to_pdf
 
-            for ans in answers:
-                st.markdown(
-                    f"""
-                    <div style="
-                        background-color:#111827;
-                        padding:16px;
-                        margin-bottom:14px;
-                        border-radius:8px;
-                        border-left:5px solid #3b82f6;
-                        color:#e5e7eb;
-                        line-height:1.7;
-                        font-size:15px;
-                    ">
-                        {ans}
-                    </div>
-                    """,
-                    unsafe_allow_html=True
+        if st.button("📄 Export Results to PDF", key="export_pdf"):
+            pdf_path = export_results_to_pdf(question, results)
+            with open(pdf_path, "rb") as f:
+                st.download_button(
+                    label="⬇️ Download PDF",
+                    data=f,
+                    file_name="islamic_knowledge_results.pdf",
+                    mime="application/pdf",
+                    key="download_pdf"
                 )
-
-        st.markdown("---")
-
-        # =========================
-        # PDF Export
-        # =========================
-        if st.button("📄 Export Results to PDF", key="export_pdf_button"):
-            try:
-                pdf_path = export_results_to_pdf(question, results)
-                with open(pdf_path, "rb") as f:
-                    st.download_button(
-                        label="⬇️ Download PDF",
-                        data=f,
-                        file_name="islamic_ai_results.pdf",
-                        mime="application/pdf",
-                        key="download_pdf_button"
-                    )
-            except Exception:
-                st.warning(
-                    "PDF export is currently unavailable.\n\n"
-                    "If you are running locally, make sure `reportlab` is installed."
-                )
+    except Exception:
+        st.info(
+            "📄 PDF export is disabled.\n\n"
+            "To enable locally:\n"
+            "`pip install reportlab`"
+        )
