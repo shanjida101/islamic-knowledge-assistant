@@ -1,5 +1,9 @@
+streamlit
 sentence-transformers
 faiss-cpu
-langdetect
-streamlit
+numpy
 requests
+reportlab
+huggingface-hub
+transformers
+torch
