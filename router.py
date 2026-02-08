@@ -1,36 +1,34 @@
+import streamlit as st
 from agents.quran_agent import QuranAgent
 from agents.hadith_agent import HadithAgent
 from agents.sharia_agent import ShariaAgent
 from agents.hanafi_agent import HanafiAgent
 
-quran_agent = QuranAgent()
-hadith_agent = HadithAgent()
-sharia_agent = ShariaAgent()
-hanafi_agent = HanafiAgent()
+
+@st.cache_resource(show_spinner=True)
+def load_agent(name):
+    if name == "quran":
+        return QuranAgent()
+    if name == "hadith":
+        return HadithAgent()
+    if name == "sharia":
+        return ShariaAgent()
+    if name == "hanafi":
+        return HanafiAgent()
 
 
 def route(question, lang="en", top_k=3):
-    results = {
-        "Qur'an": [],
-        "Hadith": [],
-        "Sharia Principles": [],
-        "Hanafi Fiqh": []
-    }
+    results = {}
 
-    # Qur'an
-    for i, a in enumerate(quran_agent.answer(question, top_k, lang), start=1):
-        results["Qur'an"].append(f"[Q-{i}] {a}")
+    # Load agents ONLY when needed
+    quran = load_agent("quran")
+    hadith = load_agent("hadith")
+    sharia = load_agent("sharia")
+    hanafi = load_agent("hanafi")
 
-    # Hadith
-    for i, a in enumerate(hadith_agent.answer(question, top_k), start=1):
-        results["Hadith"].append(f"[H-{i}] {a}")
-
-    # Sharia
-    for i, a in enumerate(sharia_agent.answer(question, top_k), start=1):
-        results["Sharia Principles"].append(f"[S-{i}] {a}")
-
-    # Hanafi
-    for i, a in enumerate(hanafi_agent.answer(question, top_k), start=1):
-        results["Hanafi Fiqh"].append(f"[F-{i}] {a}")
+    results["Qur'an"] = quran.answer(question, top_k, lang)
+    results["Hadith"] = hadith.answer(question, top_k)
+    results["Sharia Principles"] = sharia.answer(question, top_k)
+    results["Hanafi Fiqh"] = hanafi.answer(question, top_k)
 
     return results

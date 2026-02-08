@@ -1,9 +1,9 @@
 import streamlit as st
-from router import route
-from utils.pdf_export import export_results_to_pdf
+import streamlit.components.v1 as components
+from agents.quran_agent import QuranAgent
 
 # =========================
-# Page configuration
+# Page config
 # =========================
 st.set_page_config(
     page_title="Islamic Knowledge Assistant",
@@ -11,8 +11,23 @@ st.set_page_config(
     layout="wide"
 )
 
-import streamlit.components.v1 as components
+# =========================
+# Cache Quran agent ONLY
+# =========================
+@st.cache_resource(show_spinner=True)
+def load_quran_agent():
+    return QuranAgent()
 
+quran_agent = load_quran_agent()
+
+# =========================
+# Title
+# =========================
+st.title("🕌 Islamic Knowledge Assistant")
+
+# =========================
+# DISCLAIMER (HTML iframe – reliable)
+# =========================
 components.html(
     """
     <div style="
@@ -52,9 +67,8 @@ components.html(
         </p>
     </div>
     """,
-    height=340,
+    height=320,
 )
-
 
 # =========================
 # Sidebar
@@ -64,7 +78,7 @@ st.sidebar.header("Settings")
 language = st.sidebar.selectbox(
     "Qur’an Language",
     ["en", "bn"],
-    key="quran_language_select"
+    key="lang"
 )
 
 top_k = st.sidebar.slider(
@@ -72,16 +86,17 @@ top_k = st.sidebar.slider(
     min_value=1,
     max_value=5,
     value=3,
-    key="top_k_slider"
+    key="topk"
 )
 
 st.sidebar.markdown("---")
 st.sidebar.markdown(
     """
     **About this project**
-    - Multi-agent Islamic knowledge retrieval
-    - Sources: Qur’an, Hadith, Sharia principles, Hanafi fiqh
+    - Islamic knowledge retrieval
+    - Source: Qur’an
     - Retrieval-only (no rulings generated)
+    - Full multi-agent version runs locally
     """
 )
 
@@ -90,60 +105,33 @@ st.sidebar.markdown(
 # =========================
 question = st.text_input(
     "Ask a question",
-    placeholder="e.g. prayer, hardship in Islam, intention in salah",
-    key="question_input"
+    placeholder="e.g. prayer, guidance, patience",
 )
 
 # =========================
 # Results
 # =========================
 if question:
-    with st.spinner("Searching classical Islamic sources..."):
-        results = route(question, lang=language, top_k=top_k)
+    with st.spinner("Searching the Qur’an..."):
+        answers = quran_agent.answer(question, top_k, language)
 
-    st.markdown("---")
+    st.markdown("## Qur’an")
 
-    for source, answers in results.items():
-        st.markdown(f"## {source}")
-
-        for ans in answers:
-            st.markdown(
-                f"""
-                <div style="
-                    background-color:#111827;
-                    padding:16px;
-                    margin-bottom:14px;
-                    border-radius:8px;
-                    border-left:5px solid #3b82f6;
-                    color:#e5e7eb;
-                    line-height:1.7;
-                    font-size:15px;
-                ">
-                    {ans}
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-    st.markdown("---")
-
-    # =========================
-    # PDF Export
-    # =========================
-    if st.button("📄 Export Results to PDF", key="export_pdf_button"):
-        try:
-            pdf_path = export_results_to_pdf(question, results)
-            with open(pdf_path, "rb") as f:
-                st.download_button(
-                    label="⬇️ Download PDF",
-                    data=f,
-                    file_name="islamic_ai_results.pdf",
-                    mime="application/pdf",
-                    key="download_pdf_button"
-                )
-        except Exception:
-            st.warning(
-                "PDF export is currently unavailable.\n\n"
-                "If you are running locally, make sure `reportlab` is installed:\n\n"
-                "`pip install reportlab`"
-            )
+    for ans in answers:
+        st.markdown(
+            f"""
+            <div style="
+                background-color:#111827;
+                padding:16px;
+                margin-bottom:14px;
+                border-radius:8px;
+                border-left:5px solid #3b82f6;
+                color:#e5e7eb;
+                line-height:1.7;
+                font-size:15px;
+            ">
+                {ans}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
