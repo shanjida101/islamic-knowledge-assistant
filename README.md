@@ -60,9 +60,7 @@ A central **router** queries all agents and aggregates results.
 - **SentenceTransformers** (`all-MiniLM-L6-v2`)
 - **FAISS (CPU)** for vector similarity search
 - **Streamlit** for the user interface
-- **Local JSON corpora** (no paid APIs)
-
-All components run **locally and free of cost**.
+- **Local JSON corpora** ( APIs)
 
 ---
 
